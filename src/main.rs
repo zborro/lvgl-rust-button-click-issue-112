@@ -16,8 +16,8 @@ use std::time::Duration;
 use std::time::Instant;
 
 fn main() -> LvResult<()> {
-    const HOR_RES: u32 = 240;
-    const VER_RES: u32 = 240;
+    const HOR_RES: u32 = 480;
+    const VER_RES: u32 = 320;
 
     let buffer = DrawBuffer::<{ (HOR_RES * VER_RES) as usize }>::default();
     let display = lv_drv_disp_sdl!(buffer, HOR_RES, VER_RES)?;
