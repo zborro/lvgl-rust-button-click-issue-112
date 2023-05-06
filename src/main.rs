@@ -1,44 +1,27 @@
-use cstr_core::CString;
-use embedded_graphics::pixelcolor::Rgb565;
-use embedded_graphics::prelude::*;
-use embedded_graphics_simulator::{
-    OutputSettingsBuilder, SimulatorDisplay, SimulatorEvent, Window,
-};
+// Still WIP
+//#![allow(unused_labels)]
+//#![allow(unused_variables)]
+//#![allow(unreachable_code)]
 
-use lvgl;
-use lvgl::input_device::{
-    pointer::{Pointer, PointerInputData},
-    InputDriver,
-};
+use cstr_core::CString;
+use lvgl::input_device::InputDriver;
+use lvgl::lv_drv_disp_sdl;
+use lvgl::lv_drv_input_pointer_sdl;
 use lvgl::style::Style;
 use lvgl::widgets::{Btn, Label};
-use lvgl::{Align, Color, Display, DrawBuffer, LvError, Part, Widget};
+use lvgl::LvResult;
+use lvgl::{Align, Color, DrawBuffer, Part, Widget};
 use std::thread::sleep;
 use std::time::Duration;
 use std::time::Instant;
 
-#[allow(unused_assignments)]
-fn main() -> Result<(), LvError> {
+fn main() -> LvResult<()> {
     const HOR_RES: u32 = 240;
     const VER_RES: u32 = 240;
 
-    let mut sim_display: SimulatorDisplay<Rgb565> =
-        SimulatorDisplay::new(Size::new(HOR_RES, VER_RES));
-
-    let output_settings = OutputSettingsBuilder::new().scale(2).build();
-    let mut window = Window::new("Button Example", &output_settings);
-
     let buffer = DrawBuffer::<{ (HOR_RES * VER_RES) as usize }>::default();
-
-    let display = Display::register(buffer, HOR_RES, VER_RES, |refresh| {
-        sim_display.draw_iter(refresh.as_pixels()).unwrap();
-    })?;
-
-    // Define the initial state of your input
-    let mut latest_touch_status = PointerInputData::Touch(Point::new(0, 0)).released().once();
-
-    // Register a new input device that's capable of reading the current state of the input
-    let _touch_screen = Pointer::register(|| latest_touch_status, &display)?;
+    let display = lv_drv_disp_sdl!(buffer, HOR_RES, VER_RES)?;
+    let _input = lv_drv_input_pointer_sdl!(display)?;
 
     // Create screen and widgets
     let mut screen = display.get_scr_act()?;
@@ -68,37 +51,10 @@ fn main() -> Result<(), LvError> {
         }
     })?;
 
-    let mut latest_touch_point = Point::new(0, 0);
-    'running: loop {
+    loop {
         let start = Instant::now();
         lvgl::task_handler();
-        window.update(&sim_display);
-
-        let mut events = window.events().peekable();
-
-        if events.peek().is_none() {
-            latest_touch_status = PointerInputData::Touch(latest_touch_point.clone())
-                .released()
-                .once();
-        }
-
-        for event in events {
-            match event {
-                SimulatorEvent::MouseButtonUp {
-                    mouse_btn: _,
-                    point,
-                } => {
-                    println!("Clicked on: {:?}", point);
-                    latest_touch_point = point.clone();
-                    latest_touch_status = PointerInputData::Touch(point).pressed().once();
-                }
-                SimulatorEvent::Quit => break 'running,
-                _ => {}
-            }
-        }
         sleep(Duration::from_millis(15));
         lvgl::tick_inc(Instant::now().duration_since(start));
     }
-
-    Ok(())
 }
